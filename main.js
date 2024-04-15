@@ -1,36 +1,35 @@
 import { open } from "fs/promises";
-import { supportedFileTypes, toHexString } from "./src/index.js";
+import {
+    checkFileType,
+    getArguments,
+  getFileExtension,
+  programParsers,
+  supportedFileTypes,
+  toHexString,
+} from "./src/index.js";
 
 let gExitCode = 0;
 
-function exit() {
-  process.exit(gExitCode);
+/**
+ * Exits the process with the given exit code.
+ * @param {number} exitCode - The exit code to be used.
+ * @returns {void}
+ */
+function exit(exitCode = gExitCode) {
+  process.exit(exitCode);
 }
 
+
+
 async function main() {
-  const args = process.argv.slice(2);
-
-  if (args.length === 0) {
-    console.log("No arguments provided");
-    gExitCode = 1;
-    exit();
-  }
-
-  const filePath = args[0];
-
+  const filePath = getArguments();
   console.log(`File path: ${filePath}`);
 
   let cursor = 0;
 
-  let fileExtension = filePath.split(".").pop();
+  const fileExtension = getFileExtension(filePath);
 
-  const fileType = supportedFileTypes.get(fileExtension);
-
-  if (!fileType) {
-    console.log(`File type not supported: ${fileExtension}`);
-    gExitCode = 1;
-    exit();
-  }
+  const fileType = checkFileType(fileExtension);
 
   console.log(`File type: ${fileType.name}`);
 
@@ -56,24 +55,29 @@ async function main() {
   console.log(`Actual signature: ${actualSignature}`);
 
   if (actualSignature !== expectedSignature) {
-    console.log("Invalid signature");
-    gExitCode = 1;
-    exit();
+    throw Error("Invalid signature");
   }
 
   console.log("Signature valid");
+
+  const programParser = programParsers.get(fileType.name);
+
+  if (!programParser) {
+    throw Error(`Program parser not found: ${fileType.name}`);
+  }
+
+  console.log(`Program parser: ${programParser.name}`);
 
   handle.close();
 
   console.log("File closed");
 
-  exit();
+  return exit();
 }
 
 main().catch((err) => {
   console.error(err);
-  gExitCode = 1;
-  exit();
+  exit(1);
 });
 
 // Path: main.js
